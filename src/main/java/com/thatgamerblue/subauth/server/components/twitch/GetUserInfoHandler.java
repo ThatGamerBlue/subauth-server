@@ -44,7 +44,7 @@ public class GetUserInfoHandler {
 		}
 
 		Optional<TwitchUserEntity> optionalUser = twitchUserRepository.findFirstByMinecraftUuid(mcUuid);
-		if (optionalUser.isEmpty()) {
+		if (optionalUser.isEmpty() || !optionalUser.get().isLastRefreshValid()) {
 			response.setStatus(404);
 			return WebResponse.error("user not found");
 		}
