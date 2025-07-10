@@ -35,4 +35,6 @@ Routes
 - - /generate_subscribe_token - generates the subscription token to get whitelist updates
 - - /oauth_callback - stores the users twitch auth token to check their subscribers, and to store their minecraft uuid
 - - /get_user_info - gets basic info for a user
+- - /unlink - unlinks a user's twitch account
 - /ws - the websocket server
+- /backendws - websocket server used to tell the minecraft server that a link has been established

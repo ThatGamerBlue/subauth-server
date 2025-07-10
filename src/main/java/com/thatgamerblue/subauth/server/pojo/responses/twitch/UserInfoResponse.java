@@ -11,7 +11,6 @@ public class UserInfoResponse extends WebResponse {
 	String userId;
 
 	UserInfoResponse(String login, String userId) {
-		super(null);
 		this.login = login;
 		this.userId = userId;
 	}

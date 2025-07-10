@@ -1,14 +1,12 @@
 package com.thatgamerblue.subauth.server.components.twitch;
 
+import com.thatgamerblue.subauth.server.components.event.EventBus;
+import com.thatgamerblue.subauth.server.components.event.events.MinecraftUserChanged;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserRepository;
-import com.thatgamerblue.subauth.server.pojo.responses.TokenResponse;
 import com.thatgamerblue.subauth.server.pojo.responses.WebResponse;
-import com.thatgamerblue.subauth.server.pojo.subscriptions.TwitchSubscription;
 import com.thatgamerblue.subauth.server.util.Env;
-import com.thatgamerblue.subauth.server.util.JwtUtils;
 import jakarta.servlet.http.HttpServletResponse;
-import java.time.Instant;
 import java.util.Optional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,18 +15,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/twitch")
-public class GenerateSubscribeTokenHandler {
-
-	private final JwtUtils jwtUtils;
+public class UnlinkHandler {
 	private final TwitchUserRepository twitchUserRepository;
+	private final EventBus eventBus;
 
-	public GenerateSubscribeTokenHandler(JwtUtils jwtUtils, TwitchUserRepository twitchUserRepository) {
-		this.jwtUtils = jwtUtils;
+	public UnlinkHandler(TwitchUserRepository twitchUserRepository, EventBus eventBus) {
 		this.twitchUserRepository = twitchUserRepository;
+		this.eventBus = eventBus;
 	}
 
-	@GetMapping("/generate_subscribe_token")
-	public WebResponse generateSubscribeToken(
+	@GetMapping("/unlink")
+	public WebResponse unlink(
 		HttpServletResponse response,
 		@RequestParam(value = "token", required = false) String token,
 		@RequestParam(value = "mcUuid", required = false) String mcUuid
@@ -53,9 +50,11 @@ public class GenerateSubscribeTokenHandler {
 			response.setStatus(404);
 			return WebResponse.error("invalid mcUuid");
 		}
+		entity.get().setMinecraftUuid(null);
+		twitchUserRepository.save(entity.get());
 
-		TwitchSubscription subscription = new TwitchSubscription(entity.get().getUserId(), Instant.now());
+		eventBus.post(new MinecraftUserChanged(mcUuid));
 
-		return TokenResponse.of(jwtUtils.createJwt(subscription));
+		return WebResponse.success("unlinked");
 	}
 }

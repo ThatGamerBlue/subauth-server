@@ -9,7 +9,6 @@ public class TokenResponse extends WebResponse {
 	String token;
 
 	TokenResponse(String token) {
-		super(null);
 		this.token = token;
 	}
 

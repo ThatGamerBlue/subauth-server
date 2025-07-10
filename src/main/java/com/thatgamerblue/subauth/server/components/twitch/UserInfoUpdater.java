@@ -7,6 +7,7 @@ import com.github.twitch4j.helix.TwitchHelix;
 import com.github.twitch4j.helix.domain.Subscription;
 import com.github.twitch4j.helix.domain.SubscriptionList;
 import com.netflix.hystrix.exception.HystrixBadRequestException;
+import com.netflix.hystrix.exception.HystrixRuntimeException;
 import com.thatgamerblue.subauth.server.components.event.EventBus;
 import com.thatgamerblue.subauth.server.components.event.events.TwitchUserUpdated;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
@@ -92,7 +93,7 @@ public class UserInfoUpdater {
 
 	private Mono<SubscriptionList> getNextSubscriptionPage(TwitchUserEntity caster, String cursor) {
 		Supplier<SubscriptionList> s = () -> helix.getSubscriptions(caster.getAccessToken(), caster.getUserId(), cursor, null, 100).execute();
-		return Mono.fromSupplier(s).onErrorResume(HystrixBadRequestException.class, t -> {
+		return Mono.fromSupplier(s).onErrorResume(HystrixRuntimeException.class, t -> {
 			if (t.getCause() instanceof UnauthorizedException) {
 				return Mono.just(new OAuth2Credential(identityProvider.getProviderName(), caster.getAccessToken(), caster.getRefreshToken(), null, null, null, null))
 					.map(cred -> identityProvider.refreshCredential(cred).get())

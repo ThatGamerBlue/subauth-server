@@ -1,7 +1,6 @@
 package com.thatgamerblue.subauth.server.pojo;
 
 import com.google.gson.TypeAdapterFactory;
-import com.thatgamerblue.subauth.server.components.websocket.messages.WSMessage;
 import com.thatgamerblue.subauth.server.util.RuntimeTypeAdapterFactory;
 import java.util.Collection;
 

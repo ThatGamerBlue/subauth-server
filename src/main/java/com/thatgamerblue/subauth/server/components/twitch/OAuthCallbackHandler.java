@@ -5,6 +5,8 @@ import com.github.twitch4j.auth.providers.TwitchIdentityProvider;
 import com.github.twitch4j.helix.TwitchHelix;
 import com.github.twitch4j.helix.domain.User;
 import com.github.twitch4j.helix.domain.UserList;
+import com.thatgamerblue.subauth.server.components.event.EventBus;
+import com.thatgamerblue.subauth.server.components.event.events.MinecraftUserChanged;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserRepository;
 import com.thatgamerblue.subauth.server.pojo.twitch.TwitchStateToken;
@@ -39,12 +41,14 @@ public class OAuthCallbackHandler {
 	private final TwitchIdentityProvider twitchIdentityProvider;
 	private final TwitchHelix twitchHelix;
 	private final TwitchUserRepository twitchUserRepository;
+	private final EventBus eventBus;
 
-	public OAuthCallbackHandler(JwtUtils jwtUtils, TwitchIdentityProvider twitchIdentityProvider, TwitchHelix twitchHelix, TwitchUserRepository twitchUserRepository) {
+	public OAuthCallbackHandler(JwtUtils jwtUtils, TwitchIdentityProvider twitchIdentityProvider, TwitchHelix twitchHelix, TwitchUserRepository twitchUserRepository, EventBus eventBus) {
 		this.jwtUtils = jwtUtils;
 		this.twitchIdentityProvider = twitchIdentityProvider;
 		this.twitchHelix = twitchHelix;
 		this.twitchUserRepository = twitchUserRepository;
+		this.eventBus = eventBus;
 	}
 
 	@Transactional
@@ -66,6 +70,7 @@ public class OAuthCallbackHandler {
 		}
 		try {
 			handleGotCode(token, code);
+			eventBus.post(new MinecraftUserChanged(token.getUuid()));
 			return getSuccessPage();
 		} catch (Exception ex) {
 			ex.printStackTrace();
