@@ -45,7 +45,7 @@ public class TwitchWebSocketHandler implements ServiceWebSocketHandler<TwitchSub
 	@Override
 	public void sendInitialMessage(SessionData session, TwitchSubscription subscription) throws Exception {
 		Optional<TwitchUserEntity> user = twitchUserRepository.findById(String.valueOf(subscription.getUserId()));
-		if (user.isEmpty()) {
+		if (user.isEmpty() || user.get().getMinecraftUuid() == null) {
 			session.send(new ErrorMessage(ErrorType.UNKNOWN_USER));
 			session.close();
 			return;
