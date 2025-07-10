@@ -3,7 +3,9 @@ package com.thatgamerblue.subauth.server.components.websocket;
 import com.google.common.base.Functions;
 import com.google.gson.TypeAdapterFactory;
 import com.thatgamerblue.subauth.server.components.websocket.messages.AuthenticationMessage;
+import com.thatgamerblue.subauth.server.components.websocket.messages.ErrorMessage;
 import com.thatgamerblue.subauth.server.components.websocket.messages.WSMessage;
+import com.thatgamerblue.subauth.server.components.websocket.messages.WhitelistUpdateMessage;
 import com.thatgamerblue.subauth.server.pojo.GsonTypeAdapters;
 import com.thatgamerblue.subauth.server.pojo.subscriptions.Subscription;
 import com.thatgamerblue.subauth.server.pojo.subscriptions.TwitchSubscription;
@@ -19,7 +21,9 @@ public class WebSocketConfigurator {
 	@Bean
 	public TypeAdapterFactory adapterForWSMessage() {
 		return GsonTypeAdapters.createFactory(WSMessage.class, Set.of(
-			AuthenticationMessage.class
+			AuthenticationMessage.class,
+			ErrorMessage.class,
+			WhitelistUpdateMessage.class
 		));
 	}
 
