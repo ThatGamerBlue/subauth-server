@@ -6,6 +6,8 @@ import com.github.twitch4j.common.exception.UnauthorizedException;
 import com.github.twitch4j.helix.TwitchHelix;
 import com.github.twitch4j.helix.domain.Subscription;
 import com.github.twitch4j.helix.domain.SubscriptionList;
+import com.github.twitch4j.helix.domain.User;
+import com.github.twitch4j.helix.domain.UserList;
 import com.netflix.hystrix.exception.HystrixBadRequestException;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
 import com.thatgamerblue.subauth.server.components.event.EventBus;
@@ -50,6 +52,7 @@ public class UserInfoUpdater {
 	@Scheduled(fixedDelay = BATCH_DELAY_SECONDS, timeUnit = TimeUnit.SECONDS)
 	public void updateData() {
 		Flux.fromIterable(twitchUserRepository.getLeastRecentlyUpdated(BATCH_SIZE))
+			.flatMap(this::updateTwitchUserLoginName)
 			.flatMap(caster -> getSubscriptionsForBroadcaster(caster).collectList().map(list -> Tuples.of(caster, list)))
 			.flatMap(tuple -> {
 				TwitchUserEntity caster = tuple.getT1();
@@ -58,10 +61,6 @@ public class UserInfoUpdater {
 				List<String> oldSubscribers = caster.getSubscribers();
 				caster.setSubscribers(currentSubscriberIds);
 				caster.setLastCheck(Instant.now());
-				if (!currentSubscribers.isEmpty()) {
-					Subscription first = currentSubscribers.getFirst();
-					caster.setRecentlyKnownLogin(first.getBroadcasterLogin());
-				}
 				twitchUserRepository.save(caster);
 				if (CollectionUtils.disjunction(currentSubscriberIds, oldSubscribers).isEmpty()) {
 					return Mono.empty();
@@ -76,6 +75,28 @@ public class UserInfoUpdater {
 			})
 			.subscribeOn(Schedulers.boundedElastic())
 			.subscribe();
+	}
+
+	private Mono<TwitchUserEntity> updateTwitchUserLoginName(TwitchUserEntity entity) {
+		Supplier<UserList> s = () -> helix.getUsers(entity.getAccessToken(), null, null).execute();
+		return Mono.fromSupplier(s).onErrorResume(HystrixRuntimeException.class, t -> {
+			if (t.getCause() instanceof UnauthorizedException) {
+				return Mono.just(new OAuth2Credential(identityProvider.getProviderName(), entity.getAccessToken(), entity.getRefreshToken(), null, null, null, null))
+					.map(cred -> identityProvider.refreshCredential(cred).get())
+					.switchIfEmpty(markCasterFailed(entity).then(Mono.empty()))
+					.map(cred -> {
+						entity.setAccessToken(cred.getAccessToken());
+						entity.setRefreshToken(cred.getRefreshToken());
+						twitchUserRepository.save(entity);
+						return entity;
+					}).then(Mono.fromSupplier(s));
+			}
+			return markCasterFailed(entity).then(Mono.empty());
+		}).doOnNext(userList -> {
+			User user = userList.getUsers().getFirst();
+			entity.setRecentlyKnownLogin(user.getLogin());
+			twitchUserRepository.save(entity);
+		}).map(a -> entity);
 	}
 
 	private Flux<Subscription> getSubscriptionsForBroadcaster(TwitchUserEntity caster) {
