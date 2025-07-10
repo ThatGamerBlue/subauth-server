@@ -64,7 +64,6 @@ public class SubAuthWebSocketHandler extends TextWebSocketHandler {
 		Subscription sub = jwtUtils.decodeJwt(token, Subscription.class);
 		if (sub == null) {
 			session.send(new ErrorMessage(ErrorType.INVALID_TOKEN));
-			session.close();
 			return;
 		}
 		session.getAuthenticated().set(true);
