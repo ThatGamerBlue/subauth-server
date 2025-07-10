@@ -1,0 +1,2 @@
+rootProject.name = "subauth-server"
+
