@@ -13,9 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+@Slf4j
 @Configuration
 public class WebSocketConfigurator {
 	@Bean
@@ -35,7 +37,8 @@ public class WebSocketConfigurator {
 	}
 
 	@Bean
-	public Map<Class<? super Subscription>, ServiceWebSocketHandler<? super Subscription>> getHandlerMap(List<ServiceWebSocketHandler<? super Subscription>> wsHandlers) {
-		return wsHandlers.stream().collect(Collectors.toMap(ServiceWebSocketHandler::getSubscriptionType, Functions.identity()));
+	public Map<Class<? super Subscription>, ServiceWebSocketHandler<? super Subscription>> getHandlerMap(List<ServiceWebSocketHandler<?>> wsHandlers) {
+		// ugly cast otherwise spring doesnt fill in the list
+		return wsHandlers.stream().collect(Collectors.toMap(s -> ((ServiceWebSocketHandler<? super Subscription>) s).getSubscriptionType(), s -> (ServiceWebSocketHandler<? super Subscription>) s));
 	}
 }

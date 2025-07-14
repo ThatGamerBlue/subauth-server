@@ -1,27 +1,17 @@
 package com.thatgamerblue.subauth.server.components.websocket;
-
-import com.google.common.base.Functions;
 import com.google.gson.Gson;
-import com.google.gson.TypeAdapterFactory;
-import com.thatgamerblue.subauth.server.components.event.EventBus;
 import com.thatgamerblue.subauth.server.components.websocket.messages.AuthenticationMessage;
 import com.thatgamerblue.subauth.server.components.websocket.messages.ErrorMessage;
 import com.thatgamerblue.subauth.server.components.websocket.messages.ErrorMessage.ErrorType;
 import com.thatgamerblue.subauth.server.components.websocket.messages.WSMessage;
-import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
-import com.thatgamerblue.subauth.server.pojo.GsonTypeAdapters;
 import com.thatgamerblue.subauth.server.pojo.subscriptions.Subscription;
-import com.thatgamerblue.subauth.server.pojo.subscriptions.TwitchSubscription;
 import com.thatgamerblue.subauth.server.util.JwtUtils;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-import org.springframework.context.annotation.Bean;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -31,6 +21,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+@Slf4j
 @Component
 public class SubAuthWebSocketHandler extends TextWebSocketHandler {
 	// close websocket connection if client doesn't authenticate within x time
@@ -70,6 +61,9 @@ public class SubAuthWebSocketHandler extends TextWebSocketHandler {
 
 		ServiceWebSocketHandler<? super Subscription> handler = handlerMap.get(sub.getClass());
 		if (handler == null) {
+			log.info("unknown handler type: " + sub.getClass().getName());
+			log.info("valid types:");
+			handlerMap.entrySet().forEach(entry -> log.info("{}", entry));
 			session.send(new ErrorMessage(ErrorType.NO_HANDLER));
 			session.close();
 			return;
