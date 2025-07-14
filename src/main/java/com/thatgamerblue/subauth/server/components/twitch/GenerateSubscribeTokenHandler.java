@@ -4,6 +4,7 @@ import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserRepository;
 import com.thatgamerblue.subauth.server.pojo.responses.TokenResponse;
 import com.thatgamerblue.subauth.server.pojo.responses.WebResponse;
+import com.thatgamerblue.subauth.server.pojo.subscriptions.Subscription;
 import com.thatgamerblue.subauth.server.pojo.subscriptions.TwitchSubscription;
 import com.thatgamerblue.subauth.server.util.Env;
 import com.thatgamerblue.subauth.server.util.JwtUtils;
@@ -56,6 +57,6 @@ public class GenerateSubscribeTokenHandler {
 
 		TwitchSubscription subscription = new TwitchSubscription(entity.get().getUserId(), Instant.now());
 
-		return TokenResponse.of(jwtUtils.createJwt(subscription));
+		return TokenResponse.of(jwtUtils.createJwt(subscription, Subscription.class));
 	}
 }

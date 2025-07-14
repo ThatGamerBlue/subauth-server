@@ -29,7 +29,7 @@ public class SessionData {
 	private AtomicBoolean authenticated = new AtomicBoolean(false);
 
 	public void send(WSMessage message) throws Exception {
-		String serialized = gson.toJson(message);
+		String serialized = gson.toJson(message, WSMessage.class);
 		session.sendMessage(new TextMessage(serialized));
 	}
 

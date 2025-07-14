@@ -30,8 +30,12 @@ public class JwtUtils {
 	}
 
 	public String createJwt(Object object) {
+		return createJwt(object, object.getClass());
+	}
+
+	public String createJwt(Object object, Class<?> baseType) {
 		JwtBuilder builder = Jwts.builder()
-			.content(gson.toJson(object).getBytes(StandardCharsets.UTF_8), MediaType.APPLICATION_JSON.toString())
+			.content(gson.toJson(object, baseType).getBytes(StandardCharsets.UTF_8), MediaType.APPLICATION_JSON.toString())
 			.signWith(verifySecret, Jwts.SIG.HS512);
 
 		return builder.compact();
