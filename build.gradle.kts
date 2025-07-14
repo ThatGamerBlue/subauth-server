@@ -3,6 +3,8 @@ plugins {
     id("org.springframework.boot") version "3.5.3"
     id("io.spring.dependency-management") version "1.1.7"
     id("io.freefair.lombok") version "8.14"
+    id("org.springframework.boot.experimental.thin-launcher") version "1.0.31.RELEASE"
+    `maven-publish`
 }
 
 group = "com.thatgamerblue.subauth"
@@ -39,4 +41,12 @@ dependencies {
 
     implementation("com.github.twitch4j:twitch4j:1.25.0")
     runtimeOnly("org.postgresql:postgresql")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+        }
+    }
 }
