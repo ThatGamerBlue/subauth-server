@@ -34,6 +34,8 @@ public class TwitchUserEntity {
 	@CreationTimestamp
 	private Instant createdAt;
 
+	private Instant tokensValidFrom;
+
 	private boolean lastRefreshValid;
 
 	@Column(nullable = true)

@@ -7,6 +7,7 @@ import com.thatgamerblue.subauth.server.database.twitch.TwitchUserRepository;
 import com.thatgamerblue.subauth.server.pojo.responses.WebResponse;
 import com.thatgamerblue.subauth.server.util.Env;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Instant;
 import java.util.Optional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -51,6 +52,7 @@ public class UnlinkHandler {
 			return WebResponse.error("invalid mcUuid");
 		}
 		entity.get().setMinecraftUuid(null);
+		entity.get().setTokensValidFrom(Instant.now());
 		twitchUserRepository.save(entity.get());
 
 		eventBus.post(new MinecraftUserChanged(mcUuid));
