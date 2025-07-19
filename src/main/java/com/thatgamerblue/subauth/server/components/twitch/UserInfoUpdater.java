@@ -8,6 +8,7 @@ import com.github.twitch4j.helix.domain.Subscription;
 import com.github.twitch4j.helix.domain.SubscriptionList;
 import com.github.twitch4j.helix.domain.User;
 import com.github.twitch4j.helix.domain.UserList;
+import com.google.common.base.Strings;
 import com.netflix.hystrix.exception.HystrixBadRequestException;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
 import com.thatgamerblue.subauth.server.components.event.EventBus;
@@ -94,6 +95,7 @@ public class UserInfoUpdater {
 			return markCasterFailed(entity).then(Mono.empty());
 		}).doOnNext(userList -> {
 			User user = userList.getUsers().getFirst();
+			entity.setCanHaveSubscribers(!Strings.isNullOrEmpty(user.getBroadcasterType()));
 			entity.setRecentlyKnownLogin(user.getLogin());
 			twitchUserRepository.save(entity);
 		}).map(a -> entity);

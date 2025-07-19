@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface TwitchUserRepository extends JpaRepository<TwitchUserEntity, String> {
-	@Query("select u from TwitchUserEntity u where u.lastRefreshValid=true order by u.lastCheck asc limit ?1")
+	@Query("select u from TwitchUserEntity u where u.lastRefreshValid=true and u.canHaveSubscribers=true order by u.lastCheck asc limit ?1")
 	List<TwitchUserEntity> getLeastRecentlyUpdated(int count);
 
 	@Modifying

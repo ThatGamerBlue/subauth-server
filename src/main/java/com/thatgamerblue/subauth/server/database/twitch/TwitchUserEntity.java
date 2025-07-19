@@ -13,6 +13,7 @@ import java.util.List;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 @Data
@@ -37,6 +38,8 @@ public class TwitchUserEntity {
 	private Instant tokensValidFrom;
 
 	private boolean lastRefreshValid;
+
+	private boolean canHaveSubscribers;
 
 	@Column(nullable = true)
 	private String minecraftUuid;

@@ -5,6 +5,7 @@ import com.github.twitch4j.auth.providers.TwitchIdentityProvider;
 import com.github.twitch4j.helix.TwitchHelix;
 import com.github.twitch4j.helix.domain.User;
 import com.github.twitch4j.helix.domain.UserList;
+import com.google.common.base.Strings;
 import com.thatgamerblue.subauth.server.components.event.EventBus;
 import com.thatgamerblue.subauth.server.components.event.events.MinecraftUserChanged;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
@@ -92,6 +93,7 @@ public class OAuthCallbackHandler {
 		user.setRecentlyKnownLogin(helixUser.getLogin());
 		user.setAccessToken(cred.getAccessToken());
 		user.setRefreshToken(cred.getRefreshToken());
+		user.setCanHaveSubscribers(!Strings.isNullOrEmpty(helixUser.getBroadcasterType()));
 		user.setLastRefreshValid(true);
 		user.setMinecraftUuid(token.getUuid());
 		user.setLastCheck(Instant.EPOCH);
