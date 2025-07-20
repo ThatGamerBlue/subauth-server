@@ -16,6 +16,7 @@ import com.thatgamerblue.subauth.server.components.event.events.TwitchUserUpdate
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserRepository;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -52,7 +53,7 @@ public class UserInfoUpdater {
 	@Transactional
 	@Scheduled(fixedDelay = BATCH_DELAY_SECONDS, timeUnit = TimeUnit.SECONDS)
 	public void updateData() {
-		Flux.fromIterable(twitchUserRepository.getLeastRecentlyUpdated(BATCH_SIZE))
+		Flux.fromIterable(twitchUserRepository.getLeastRecentlyUpdated(BATCH_SIZE, Instant.now().minus(1, ChronoUnit.MINUTES)))
 			.flatMap(this::updateTwitchUserLoginName)
 			.flatMap(caster -> getSubscriptionsForBroadcaster(caster).collectList().map(list -> Tuples.of(caster, list)))
 			.flatMap(tuple -> {
