@@ -85,7 +85,7 @@ public class UserInfoUpdater {
 			if (t.getCause() instanceof UnauthorizedException) {
 				return Mono.just(new OAuth2Credential(identityProvider.getProviderName(), entity.getAccessToken(), entity.getRefreshToken(), null, null, null, null))
 					.map(cred -> identityProvider.refreshCredential(cred).get())
-					.switchIfEmpty(markCasterFailed(entity).then(Mono.empty()))
+					.switchIfEmpty(markCasterFailed(t, entity).then(Mono.empty()))
 					.map(cred -> {
 						entity.setAccessToken(cred.getAccessToken());
 						entity.setRefreshToken(cred.getRefreshToken());
@@ -93,7 +93,7 @@ public class UserInfoUpdater {
 						return entity;
 					}).then(Mono.fromSupplier(s));
 			}
-			return markCasterFailed(entity).then(Mono.empty());
+			return markCasterFailed(t, entity).then(Mono.empty());
 		}).doOnNext(userList -> {
 			User user = userList.getUsers().getFirst();
 			entity.setCanHaveSubscribers(!Strings.isNullOrEmpty(user.getBroadcasterType()));
@@ -121,7 +121,7 @@ public class UserInfoUpdater {
 			if (t.getCause() instanceof UnauthorizedException) {
 				return Mono.just(new OAuth2Credential(identityProvider.getProviderName(), caster.getAccessToken(), caster.getRefreshToken(), null, null, null, null))
 					.map(cred -> identityProvider.refreshCredential(cred).get())
-					.switchIfEmpty(markCasterFailed(caster).then(Mono.empty()))
+					.switchIfEmpty(markCasterFailed(t, caster).then(Mono.empty()))
 					.map(cred -> {
 						caster.setAccessToken(cred.getAccessToken());
 						caster.setRefreshToken(cred.getRefreshToken());
@@ -129,12 +129,13 @@ public class UserInfoUpdater {
 						return caster;
 					}).then(Mono.fromSupplier(s));
 			}
-			return markCasterFailed(caster).then(Mono.empty());
+			return markCasterFailed(t, caster).then(Mono.empty());
 		});
 	}
 
-	private Mono<Void> markCasterFailed(TwitchUserEntity caster) {
+	private Mono<Void> markCasterFailed(Throwable ex, TwitchUserEntity caster) {
 		return Mono.fromRunnable(() -> {
+			log.info("Marking caster {} as failed due to exception", caster.getRecentlyKnownLogin(), ex);
 			caster.setLastRefreshValid(false);
 			twitchUserRepository.save(caster);
 		});
