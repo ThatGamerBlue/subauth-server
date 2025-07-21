@@ -2,19 +2,18 @@ package com.thatgamerblue.subauth.server.components.twitch;
 
 import com.github.philippheuer.credentialmanager.domain.OAuth2Credential;
 import com.github.twitch4j.auth.providers.TwitchIdentityProvider;
-import com.github.twitch4j.common.exception.UnauthorizedException;
 import com.github.twitch4j.helix.TwitchHelix;
 import com.github.twitch4j.helix.domain.Subscription;
 import com.github.twitch4j.helix.domain.SubscriptionList;
 import com.github.twitch4j.helix.domain.User;
 import com.github.twitch4j.helix.domain.UserList;
 import com.google.common.base.Strings;
-import com.netflix.hystrix.exception.HystrixBadRequestException;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
 import com.thatgamerblue.subauth.server.components.event.EventBus;
 import com.thatgamerblue.subauth.server.components.event.events.TwitchUserUpdated;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserRepository;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -81,25 +80,14 @@ public class UserInfoUpdater {
 
 	private Mono<TwitchUserEntity> updateTwitchUserLoginName(TwitchUserEntity entity) {
 		Supplier<UserList> s = () -> helix.getUsers(entity.getAccessToken(), null, null).execute();
-		return Mono.fromSupplier(s).onErrorResume(HystrixRuntimeException.class, t -> {
-			if (t.getCause() instanceof UnauthorizedException) {
-				return Mono.just(new OAuth2Credential(identityProvider.getProviderName(), entity.getAccessToken(), entity.getRefreshToken(), null, null, null, null))
-					.map(cred -> identityProvider.refreshCredential(cred).get())
-					.switchIfEmpty(markCasterFailed(t, entity).then(Mono.empty()))
-					.map(cred -> {
-						entity.setAccessToken(cred.getAccessToken());
-						entity.setRefreshToken(cred.getRefreshToken());
-						twitchUserRepository.save(entity);
-						return entity;
-					}).then(Mono.fromSupplier(s));
-			}
-			return markCasterFailed(t, entity).then(Mono.empty());
-		}).doOnNext(userList -> {
-			User user = userList.getUsers().getFirst();
-			entity.setCanHaveSubscribers(!Strings.isNullOrEmpty(user.getBroadcasterType()));
-			entity.setRecentlyKnownLogin(user.getLogin());
-			twitchUserRepository.save(entity);
-		}).map(a -> entity);
+		return Mono.fromSupplier(s)
+			.onErrorResume(HystrixRuntimeException.class, t -> handleHystrixRuntimeError(t, entity, s))
+			.doOnNext(userList -> {
+				User user = userList.getUsers().getFirst();
+				entity.setCanHaveSubscribers(!Strings.isNullOrEmpty(user.getBroadcasterType()));
+				entity.setRecentlyKnownLogin(user.getLogin());
+				twitchUserRepository.save(entity);
+			}).map(a -> entity);
 	}
 
 	private Flux<Subscription> getSubscriptionsForBroadcaster(TwitchUserEntity caster) {
@@ -117,20 +105,22 @@ public class UserInfoUpdater {
 
 	private Mono<SubscriptionList> getNextSubscriptionPage(TwitchUserEntity caster, String cursor) {
 		Supplier<SubscriptionList> s = () -> helix.getSubscriptions(caster.getAccessToken(), caster.getUserId(), cursor, null, 100).execute();
-		return Mono.fromSupplier(s).onErrorResume(HystrixRuntimeException.class, t -> {
-			if (t.getCause() instanceof UnauthorizedException) {
-				return Mono.just(new OAuth2Credential(identityProvider.getProviderName(), caster.getAccessToken(), caster.getRefreshToken(), null, null, null, null))
-					.map(cred -> identityProvider.refreshCredential(cred).get())
-					.switchIfEmpty(markCasterFailed(t, caster).then(Mono.empty()))
-					.map(cred -> {
-						caster.setAccessToken(cred.getAccessToken());
-						caster.setRefreshToken(cred.getRefreshToken());
-						twitchUserRepository.save(caster);
-						return caster;
-					}).then(Mono.fromSupplier(s));
-			}
-			return markCasterFailed(t, caster).then(Mono.empty());
-		});
+		return Mono.fromSupplier(s)
+			.onErrorResume(HystrixRuntimeException.class, t -> handleHystrixRuntimeError(t, caster, s));
+	}
+
+	private <T> Mono<T> handleHystrixRuntimeError(HystrixRuntimeException ex, TwitchUserEntity caster, Supplier<T> supplier) {
+		return Mono.just(new OAuth2Credential(identityProvider.getProviderName(), caster.getAccessToken(), caster.getRefreshToken(), null, null, null, null))
+			.delayElement(Duration.of(5, ChronoUnit.SECONDS)) // wait 5 seconds for rate limiting before updating token
+			.map(cred -> identityProvider.refreshCredential(cred).get())
+			.switchIfEmpty(markCasterFailed(ex, caster).then(Mono.empty()))
+			.map(cred -> {
+				caster.setAccessToken(cred.getAccessToken());
+				caster.setRefreshToken(cred.getRefreshToken());
+				twitchUserRepository.save(caster);
+				return caster;
+			})
+			.then(Mono.fromSupplier(supplier));
 	}
 
 	private Mono<Void> markCasterFailed(Throwable ex, TwitchUserEntity caster) {
