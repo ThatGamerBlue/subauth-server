@@ -7,7 +7,7 @@ import com.github.twitch4j.helix.domain.User;
 import com.github.twitch4j.helix.domain.UserList;
 import com.google.common.base.Strings;
 import com.thatgamerblue.subauth.server.components.event.EventBus;
-import com.thatgamerblue.subauth.server.components.event.events.MinecraftUserChanged;
+import com.thatgamerblue.subauth.server.components.event.events.TwitchUserLinkUpdated;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserRepository;
 import com.thatgamerblue.subauth.server.pojo.twitch.TwitchStateToken;
@@ -18,7 +18,6 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -70,8 +69,8 @@ public class OAuthCallbackHandler {
 			return getErrorPage("Something", "invalid state", "state parameter was not valid");
 		}
 		try {
-			handleGotCode(token, code);
-			eventBus.post(new MinecraftUserChanged(token.getUuid()));
+			TwitchUserEntity user = handleGotCode(token, code);
+			eventBus.post(new TwitchUserLinkUpdated(token.getUuid(), user));
 			return getSuccessPage();
 		} catch (Exception ex) {
 			ex.printStackTrace();
@@ -80,7 +79,7 @@ public class OAuthCallbackHandler {
 	}
 
 	@Transactional
-	protected void handleGotCode(TwitchStateToken token, String code) {
+	protected TwitchUserEntity handleGotCode(TwitchStateToken token, String code) {
 		OAuth2Credential cred = twitchIdentityProvider.getCredentialByCode(code);
 		UserList list = twitchHelix.getUsers(cred.getAccessToken(), null, null).execute();
 		User helixUser = list.getUsers().getFirst();
@@ -99,6 +98,8 @@ public class OAuthCallbackHandler {
 		user.setLastCheck(Instant.EPOCH);
 		user.setTokensValidFrom(Instant.now());
 		twitchUserRepository.save(user);
+
+		return user;
 	}
 
 	private String getErrorPage(String service, String error, String errorDescription) {

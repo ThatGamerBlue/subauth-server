@@ -1,7 +1,7 @@
 package com.thatgamerblue.subauth.server.components.twitch;
 
 import com.thatgamerblue.subauth.server.components.event.EventBus;
-import com.thatgamerblue.subauth.server.components.event.events.MinecraftUserChanged;
+import com.thatgamerblue.subauth.server.components.event.events.TwitchUserLinkUpdated;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserRepository;
 import com.thatgamerblue.subauth.server.pojo.responses.WebResponse;
@@ -46,16 +46,17 @@ public class UnlinkHandler {
 			return WebResponse.error("invalid authorization");
 		}
 
-		Optional<TwitchUserEntity> entity = twitchUserRepository.findFirstByMinecraftUuid(mcUuid);
-		if (entity.isEmpty()) {
+		Optional<TwitchUserEntity> optionalEntity = twitchUserRepository.findFirstByMinecraftUuid(mcUuid);
+		if (optionalEntity.isEmpty()) {
 			response.setStatus(404);
 			return WebResponse.error("invalid mcUuid");
 		}
-		entity.get().setMinecraftUuid(null);
-		entity.get().setTokensValidFrom(Instant.now());
-		twitchUserRepository.save(entity.get());
+		TwitchUserEntity entity = optionalEntity.get();
+		entity.setMinecraftUuid(null);
+		entity.setTokensValidFrom(Instant.now());
+		twitchUserRepository.save(entity);
 
-		eventBus.post(new MinecraftUserChanged(mcUuid));
+		eventBus.post(new TwitchUserLinkUpdated(mcUuid, entity));
 
 		return WebResponse.success("unlinked");
 	}

@@ -17,4 +17,6 @@ public interface TwitchUserRepository extends JpaRepository<TwitchUserEntity, St
 	void updateUuidToNullForOtherUsers(String uuid, String userId);
 
 	Optional<TwitchUserEntity> findFirstByMinecraftUuid(String uuid);
+
+	List<TwitchUserEntity> getAllBySubscribersContaining(String userId);
 }

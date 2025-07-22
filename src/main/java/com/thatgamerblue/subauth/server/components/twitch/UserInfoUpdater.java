@@ -10,13 +10,15 @@ import com.github.twitch4j.helix.domain.UserList;
 import com.google.common.base.Strings;
 import com.netflix.hystrix.exception.HystrixRuntimeException;
 import com.thatgamerblue.subauth.server.components.event.EventBus;
-import com.thatgamerblue.subauth.server.components.event.events.TwitchUserUpdated;
+import com.thatgamerblue.subauth.server.components.event.events.TwitchUserLinkUpdated;
+import com.thatgamerblue.subauth.server.components.event.events.TwitchSubscriberListUpdated;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +49,20 @@ public class UserInfoUpdater {
 		this.twitchUserRepository = twitchUserRepository;
 		this.identityProvider = identityProvider;
 		this.helix = helix;
+
+		eventBus.onEvent(TwitchUserLinkUpdated.class)
+			.subscribe(this::onMinecraftUserUpdated);
+	}
+
+	private void onMinecraftUserUpdated(TwitchUserLinkUpdated event) {
+		try {
+			TwitchUserEntity updatedUser = event.getEntity();
+			String userId = updatedUser.getUserId();
+			List<TwitchUserEntity> casters = twitchUserRepository.getAllBySubscribersContaining(userId);
+			casters.forEach(caster -> eventBus.post(new TwitchSubscriberListUpdated(caster)));
+		} catch (Throwable ignored) {
+
+		}
 	}
 
 	@Transactional
@@ -69,7 +85,7 @@ public class UserInfoUpdater {
 					return Mono.just(caster);
 				}
 			})
-			.doOnNext(caster -> eventBus.post(new TwitchUserUpdated(caster)))
+			.doOnNext(caster -> eventBus.post(new TwitchSubscriberListUpdated(caster)))
 			.onErrorResume(t -> {
 				log.info("Error updating caster: ", t);
 				return Mono.empty();

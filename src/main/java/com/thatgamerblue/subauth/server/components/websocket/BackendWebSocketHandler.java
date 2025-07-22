@@ -1,7 +1,7 @@
 package com.thatgamerblue.subauth.server.components.websocket;
 
 import com.thatgamerblue.subauth.server.components.event.EventBus;
-import com.thatgamerblue.subauth.server.components.event.events.MinecraftUserChanged;
+import com.thatgamerblue.subauth.server.components.event.events.TwitchUserLinkUpdated;
 import com.thatgamerblue.subauth.server.util.Env;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,7 @@ public class BackendWebSocketHandler extends TextWebSocketHandler {
 		if (message.getPayload().equals(Env.TOKEN_PSK.get())) {
 			activeSession = new ConcurrentWebSocketSessionDecorator(session, 2000, 4 * 1024);
 
-			disposable = eventBus.onEvent(MinecraftUserChanged.class)
+			disposable = eventBus.onEvent(TwitchUserLinkUpdated.class)
 				.flatMap(mcUser -> Mono.fromRunnable(
 							() -> {
 								try {

@@ -1,7 +1,7 @@
 package com.thatgamerblue.subauth.server.components.twitch;
 
 import com.thatgamerblue.subauth.server.components.event.EventBus;
-import com.thatgamerblue.subauth.server.components.event.events.TwitchUserUpdated;
+import com.thatgamerblue.subauth.server.components.event.events.TwitchSubscriberListUpdated;
 import com.thatgamerblue.subauth.server.components.websocket.ServiceWebSocketHandler;
 import com.thatgamerblue.subauth.server.components.websocket.SessionData;
 import com.thatgamerblue.subauth.server.components.websocket.messages.ErrorMessage;
@@ -31,8 +31,8 @@ public class TwitchWebSocketHandler implements ServiceWebSocketHandler<TwitchSub
 
 	@Override
 	public Disposable startHandlingEvents(SessionData session, TwitchSubscription subscription) {
-		return eventBus.onEvent(TwitchUserUpdated.class)
-			.map(TwitchUserUpdated::getEntity)
+		return eventBus.onEvent(TwitchSubscriberListUpdated.class)
+			.map(TwitchSubscriberListUpdated::getEntity)
 			.filter(entity -> entity.getUserId().equals(subscription.getUserId()))
 			.flatMap(entity -> Mono.fromRunnable(
 						() -> onUserUpdated(session, subscription, entity)

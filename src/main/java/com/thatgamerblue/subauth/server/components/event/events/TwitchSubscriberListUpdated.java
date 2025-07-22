@@ -4,6 +4,6 @@ import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
 import lombok.Value;
 
 @Value
-public class TwitchUserUpdated {
+public class TwitchSubscriberListUpdated {
 	TwitchUserEntity entity;
 }
