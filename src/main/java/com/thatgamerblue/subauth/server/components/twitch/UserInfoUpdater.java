@@ -69,6 +69,13 @@ public class UserInfoUpdater {
 	@Scheduled(fixedDelay = BATCH_DELAY_SECONDS, timeUnit = TimeUnit.SECONDS)
 	public void updateData() {
 		Flux.fromIterable(twitchUserRepository.getLeastRecentlyUpdated(BATCH_SIZE, Instant.now().minus(1, ChronoUnit.MINUTES)))
+			.flatMap(this::updateCasterData)
+			.subscribeOn(Schedulers.boundedElastic())
+			.subscribe();
+	}
+
+	private Mono<Void> updateCasterData(TwitchUserEntity casterIn) {
+		return Mono.just(casterIn)
 			.flatMap(this::updateTwitchUserLoginName)
 			.flatMap(caster -> getSubscriptionsForBroadcaster(caster).collectList().map(list -> Tuples.of(caster, list)))
 			.flatMap(tuple -> {
@@ -86,12 +93,11 @@ public class UserInfoUpdater {
 				}
 			})
 			.doOnNext(caster -> eventBus.post(new TwitchSubscriberListUpdated(caster)))
+			.onErrorResume(HystrixRuntimeException.class, ex -> markCasterFailed(ex, casterIn).then(Mono.empty()))
 			.onErrorResume(t -> {
 				log.info("Error updating caster: ", t);
 				return Mono.empty();
-			})
-			.subscribeOn(Schedulers.boundedElastic())
-			.subscribe();
+			}).then();
 	}
 
 	private Mono<TwitchUserEntity> updateTwitchUserLoginName(TwitchUserEntity entity) {
