@@ -31,6 +31,7 @@ public class Env<T> {
 	}
 
 	public static final Env<String> TOKEN_PSK = Env.of("TOKEN_PSK");
+	public static final Env<String> MINECRAFT_SERVER = Env.of("MINECRAFT_SERVER");
 
 	private static final Map<String, String> envMap;
 
