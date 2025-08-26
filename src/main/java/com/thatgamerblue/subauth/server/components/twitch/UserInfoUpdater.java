@@ -128,7 +128,8 @@ public class UserInfoUpdater {
 	private <T> Mono<T> handleHystrixRuntimeError(HystrixRuntimeException ex, TwitchUserEntity caster, Supplier<T> supplier) {
 		return Mono.just(new OAuth2Credential(identityProvider.getProviderName(), caster.getAccessToken(), caster.getRefreshToken(), null, null, null, null))
 			.delayElement(Duration.of(5, ChronoUnit.SECONDS)) // wait 5 seconds for rate limiting before updating token
-			.map(cred -> identityProvider.refreshCredential(cred).get())
+			.map(identityProvider::refreshCredential)
+			.flatMap(o -> o.map(Mono::just).orElseGet(Mono::empty))
 			.switchIfEmpty(markCasterFailed(ex, caster).then(Mono.empty()))
 			.map(cred -> {
 				caster.setAccessToken(cred.getAccessToken());
