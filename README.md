@@ -21,6 +21,7 @@ Copy `env.example.json` to `env.json`, and fill out the variables as follows:
 - `TWITCH_OAUTH_REDIRECT`: The redirect URL you supplied to Twitch earlier
 - `JWT_VERIFY_SECRET`: 64 bytes of cryptographically secure random data, encoded as hexadecimal. Used to supply and verify JSON Web Tokens.  
 - `TOKEN_PSK`: A pre-shared key, shared between this application and the plugin running on the authorization Minecraft server. Can be any string, should be treated like any password. Make it long and secure.
+- `MINECRAFT_SERVER`: Connection address of the authorization Minecraft server. Used for displaying instructions on the root page of the website.
 
 Running
 ---
