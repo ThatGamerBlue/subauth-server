@@ -7,6 +7,6 @@ public class ErrorMessage extends WSMessage {
 	ErrorType error;
 
 	public enum ErrorType {
-		INVALID_TOKEN, NO_HANDLER, ALREADY_SUBSCRIBED, UNKNOWN_USER;
+		INVALID_MESSAGE, INVALID_TOKEN, NO_HANDLER, ALREADY_SUBSCRIBED, UNKNOWN_USER;
 	}
 }

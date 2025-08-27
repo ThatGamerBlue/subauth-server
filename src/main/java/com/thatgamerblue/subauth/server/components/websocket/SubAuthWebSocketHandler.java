@@ -43,7 +43,16 @@ public class SubAuthWebSocketHandler extends TextWebSocketHandler {
 	protected void handleTextMessage(WebSocketSession _session, TextMessage _message) throws Exception {
 		SessionData session = threadSafeSessions.get(_session.getId());
 		String payload = _message.getPayload();
-		WSMessage message = gson.fromJson(payload, WSMessage.class);
+
+		WSMessage message;
+		try {
+			message = gson.fromJson(payload, WSMessage.class);
+		} catch (Exception ex) {
+			log.info("Invalid message from client, {}", ex.toString());
+			session.send(new ErrorMessage(ErrorType.INVALID_MESSAGE));
+			session.close();
+			return;
+		}
 
 		if (message instanceof AuthenticationMessage auth) {
 			handleAuthenticationMessage(session, auth);
