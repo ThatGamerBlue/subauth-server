@@ -42,6 +42,10 @@ public class SubAuthWebSocketHandler extends TextWebSocketHandler {
 	@Override
 	protected void handleTextMessage(WebSocketSession _session, TextMessage _message) throws Exception {
 		SessionData session = threadSafeSessions.get(_session.getId());
+		if (session == null) {
+			_session.close(CloseStatus.SERVER_ERROR);
+			return;
+		}
 		String payload = _message.getPayload();
 
 		WSMessage message;
