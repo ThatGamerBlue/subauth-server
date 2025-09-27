@@ -63,10 +63,9 @@ public class SubAuthWebSocketHandler extends TextWebSocketHandler {
 		String token = message.getToken();
 		Subscription sub = jwtUtils.decodeJwt(token, Subscription.class);
 		if (sub == null) {
-			session.send(new ErrorMessage(ErrorType.INVALID_TOKEN));
+			session.send(new ErrorMessage(ErrorType.INVALID_TOKEN, token));
 			return;
 		}
-		session.getAuthenticated().set(true);
 
 		ServiceWebSocketHandler<? super Subscription> handler = handlerMap.get(sub.getClass());
 		if (handler == null) {
@@ -78,11 +77,17 @@ public class SubAuthWebSocketHandler extends TextWebSocketHandler {
 			return;
 		}
 
+		if (!handler.isSubscriptionValid(sub)) {
+			session.send(new ErrorMessage(ErrorType.INVALID_TOKEN, token));
+			return;
+		}
+
 		if (session.getSeenTokens().contains(token)) {
-			session.send(new ErrorMessage(ErrorType.ALREADY_SUBSCRIBED));
+			session.send(new ErrorMessage(ErrorType.ALREADY_SUBSCRIBED, token));
 			// don't close, just do nothing
 			return;
 		}
+		session.getAuthenticated().set(true);
 		session.getSeenTokens().add(token);
 		session.addDisposable(handler.startHandlingEvents(session, sub));
 		handler.sendInitialMessage(session, sub);

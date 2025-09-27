@@ -6,6 +6,8 @@ import reactor.core.Disposable;
 public interface ServiceWebSocketHandler<Sub extends Subscription> {
 	Disposable startHandlingEvents(SessionData session, Sub subscription);
 
+	boolean isSubscriptionValid(Sub subscription);
+
 	void sendInitialMessage(SessionData session, Sub subscription) throws Exception;
 
 	Class<Sub> getSubscriptionType();
