@@ -43,10 +43,15 @@ public class TwitchWebSocketHandler implements ServiceWebSocketHandler<TwitchSub
 	}
 
 	@Override
-	public boolean isSubscriptionValid(TwitchSubscription subscription) {
+	public ErrorType getErrorIfInvalid(TwitchSubscription subscription) {
 		Optional<TwitchUserEntity> userOptional = twitchUserRepository.findById(String.valueOf(subscription.getUserId()));
 		TwitchUserEntity user = userOptional.orElse(null);
-		return user != null && user.getMinecraftUuid() != null && user.isLastRefreshValid() && subscription.getCreatedAt().isAfter(user.getTokensValidFrom());
+		if (user == null || user.getMinecraftUuid() == null) {
+			return ErrorType.UNKNOWN_USER;
+		} else if (!user.isLastRefreshValid() || subscription.getCreatedAt().isBefore(user.getTokensValidFrom())) {
+			return ErrorType.INVALID_TOKEN;
+		}
+		return null;
 	}
 
 	@Override

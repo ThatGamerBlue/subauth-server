@@ -81,8 +81,9 @@ public class SubAuthWebSocketHandler extends TextWebSocketHandler {
 			return;
 		}
 
-		if (!handler.isSubscriptionValid(sub)) {
-			session.send(new ErrorMessage(ErrorType.INVALID_TOKEN, token));
+		ErrorType errorIfInvalid = handler.getErrorIfInvalid(sub);
+		if (errorIfInvalid != null) {
+			session.send(new ErrorMessage(errorIfInvalid, token));
 			return;
 		}
 
