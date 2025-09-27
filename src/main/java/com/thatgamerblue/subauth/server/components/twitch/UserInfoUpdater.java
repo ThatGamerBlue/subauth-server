@@ -18,8 +18,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
@@ -101,6 +101,10 @@ public class UserInfoUpdater {
 	}
 
 	private Mono<TwitchUserEntity> updateTwitchUserLoginName(TwitchUserEntity entity) {
+		if (entity.getLastCheck().isAfter(Instant.now().minus(1, ChronoUnit.HOURS))) {
+			return Mono.just(entity);
+		}
+
 		Supplier<UserList> s = () -> helix.getUsers(entity.getAccessToken(), null, null).execute();
 		return Mono.fromSupplier(s)
 			.onErrorResume(HystrixRuntimeException.class, t -> handleHystrixRuntimeError(t, entity, s))
@@ -147,6 +151,14 @@ public class UserInfoUpdater {
 	}
 
 	private Mono<Void> markCasterFailed(Throwable ex, TwitchUserEntity caster) {
+		Throwable cause = ex.getCause();
+		if (cause instanceof TimeoutException) {
+			return Mono.fromRunnable(() -> {
+				log.info("Timeout checking caster {} ({}), backing off.", caster.getUserId(), caster.getRecentlyKnownLogin());
+				caster.setLastCheck(Instant.now().plus(10, ChronoUnit.MINUTES));
+				twitchUserRepository.save(caster);
+			});
+		}
 		return Mono.fromRunnable(() -> {
 			log.info("Marking caster {} as failed due to exception", caster.getRecentlyKnownLogin(), ex);
 			caster.setLastRefreshValid(false);
