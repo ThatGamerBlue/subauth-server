@@ -2,6 +2,7 @@ package com.thatgamerblue.subauth.server.components.twitch;
 
 import com.github.philippheuer.credentialmanager.domain.OAuth2Credential;
 import com.github.twitch4j.auth.providers.TwitchIdentityProvider;
+import com.github.twitch4j.common.exception.UnauthorizedException;
 import com.github.twitch4j.helix.TwitchHelix;
 import com.github.twitch4j.helix.domain.Subscription;
 import com.github.twitch4j.helix.domain.SubscriptionList;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
+import feign.RetryableException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -36,6 +38,7 @@ import reactor.util.function.Tuples;
 @Component
 @EnableScheduling
 public class UserInfoUpdater {
+	private static final Duration BACKOFF_DURATION = Duration.of(10, ChronoUnit.MINUTES);
 	private static final int BATCH_DELAY_SECONDS = 5;
 	private static final int BATCH_SIZE = 50;
 
@@ -155,14 +158,29 @@ public class UserInfoUpdater {
 		if (cause instanceof TimeoutException) {
 			return Mono.fromRunnable(() -> {
 				log.info("Timeout checking caster {} ({}), backing off.", caster.getUserId(), caster.getRecentlyKnownLogin());
-				caster.setLastCheck(Instant.now().plus(10, ChronoUnit.MINUTES));
+				backoff(caster);
+			});
+		} else if (cause instanceof RetryableException) {
+			return Mono.fromRunnable(() -> {
+				log.info("Retryable exception thrown checking caster {} ({}), backing off.", caster.getUserId(), caster.getRecentlyKnownLogin());
+				backoff(caster);
+			});
+		} else if (cause instanceof UnauthorizedException) {
+			return Mono.fromRunnable(() -> {
+				log.info("Marking caster {} ({}) failed due to unauthorized exception.", caster.getUserId(), caster.getRecentlyKnownLogin());
+				caster.setLastRefreshValid(false);
 				twitchUserRepository.save(caster);
 			});
 		}
 		return Mono.fromRunnable(() -> {
-			log.info("Marking caster {} as failed due to exception", caster.getRecentlyKnownLogin(), ex);
+			log.info("Marking caster {} as failed due to unknown exception", caster.getRecentlyKnownLogin(), ex);
 			caster.setLastRefreshValid(false);
 			twitchUserRepository.save(caster);
 		});
+	}
+
+	private void backoff(TwitchUserEntity caster) {
+		caster.setLastCheck(Instant.now().plus(BACKOFF_DURATION));
+		twitchUserRepository.save(caster);
 	}
 }
