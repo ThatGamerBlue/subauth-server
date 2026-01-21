@@ -96,7 +96,9 @@ public class OAuthCallbackHandler {
 		user.setLastRefreshValid(true);
 		user.setMinecraftUuid(token.getUuid());
 		user.setLastCheck(Instant.EPOCH);
-		user.setTokensValidFrom(Instant.now());
+		if (user.getTokensValidFrom() == null) {
+			user.setTokensValidFrom(Instant.now());
+		}
 		twitchUserRepository.save(user);
 
 		return user;
