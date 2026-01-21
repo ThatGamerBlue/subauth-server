@@ -5,7 +5,7 @@ You'll need Java version 21 to build this project, and a Postgres database to ru
 
 Building
 ---
-Simply run `./gradlew bootJar`, and the built server .jar should appear in `build/libs/` as `subauth-server-*version*.jar`
+Simply run `./gradlew bootJar` for a fat jar, or `./gradlew build` for a thin jar that downloads its own dependencies, and the built server .jar should appear in `build/libs/` as `subauth-server-*version*.jar`
 
 Setup
 ---
