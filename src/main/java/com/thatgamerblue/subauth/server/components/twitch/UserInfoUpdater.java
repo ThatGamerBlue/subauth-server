@@ -134,6 +134,8 @@ public class UserInfoUpdater {
 
 	private Mono<SubscriptionList> getNextSubscriptionPage(TwitchUserEntity caster, String cursor) {
 		Supplier<SubscriptionList> s = () -> helix.getSubscriptions(caster.getAccessToken(), caster.getUserId(), cursor, null, 100).execute();
+		// todo: possibly insert a .delayElement() here for rate limiting purposes?
+		//       twitch4j is meant to have bucketing but maybe twitch has ip address limits too
 		return Mono.fromSupplier(s)
 			.onErrorResume(HystrixRuntimeException.class, t -> handleHystrixRuntimeError(t, caster, s));
 	}
@@ -170,6 +172,11 @@ public class UserInfoUpdater {
 				log.info("Marking caster {} ({}) failed due to unauthorized exception.", caster.getUserId(), caster.getRecentlyKnownLogin());
 				caster.setLastRefreshValid(false);
 				twitchUserRepository.save(caster);
+			});
+		} else if (cause instanceof RuntimeException && "Hystrix circuit short-circuited and is OPEN".equals(cause.getMessage())) {
+			return Mono.fromRunnable(() -> {
+				log.info("Rate limit or network issue while checking caster {} ({}), backing off.", caster.getUserId(), caster.getRecentlyKnownLogin());
+				backoff(caster);
 			});
 		}
 		return Mono.fromRunnable(() -> {
