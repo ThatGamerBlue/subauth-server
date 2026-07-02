@@ -19,7 +19,10 @@ import com.thatgamerblue.subauth.server.database.twitch.TwitchUserRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
@@ -85,9 +88,13 @@ public class UserInfoUpdater {
 			.flatMap(tuple -> {
 				TwitchUserEntity caster = tuple.getT1();
 				List<Subscription> currentSubscribers = tuple.getT2();
-				List<SubscriberInfo> currentSubscriberIds = currentSubscribers.stream().map(s -> new SubscriberInfo(s.getUserId(), SubscriptionLevel.fromTier(s.getTier()))).toList();
-				List<SubscriberInfo> oldSubscribers = caster.getSubscribers();
-				caster.setSubscribers(currentSubscriberIds);
+				List<SubscriberInfo> currentSubscriberIds = currentSubscribers.stream()
+					.map(s -> new SubscriberInfo(s.getUserId(), SubscriptionLevel.fromTier(s.getTier())))
+					.toList();
+				removeDuplicateSubscribers(currentSubscriberIds);
+				List<SubscriberInfo> oldSubscribers = new ArrayList<>(caster.getSubscribers());
+				caster.getSubscribers().clear();
+				caster.getSubscribers().addAll(currentSubscriberIds);
 				caster.setLastCheck(Instant.now());
 				twitchUserRepository.save(caster);
 				if (CollectionUtils.disjunction(currentSubscriberIds, oldSubscribers).isEmpty()) {
@@ -102,6 +109,17 @@ public class UserInfoUpdater {
 				log.info("Error updating caster: ", t);
 				return Mono.empty();
 			}).then();
+	}
+
+	private void removeDuplicateSubscribers(List<SubscriberInfo> subs) {
+		Map<String, SubscriberInfo> highestTierSubscriptions = new HashMap<>();
+		for (SubscriberInfo sub : subs) {
+			highestTierSubscriptions.merge(sub.getUserId(), sub,
+				(existing, current) -> current.getTier().isValidForConstraint(existing.getTier()) ? current : existing
+			);
+		}
+		subs.clear();
+		subs.addAll(highestTierSubscriptions.values());
 	}
 
 	private Mono<TwitchUserEntity> updateTwitchUserLoginName(TwitchUserEntity entity) {
