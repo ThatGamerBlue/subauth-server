@@ -88,9 +88,9 @@ public class UserInfoUpdater {
 			.flatMap(tuple -> {
 				TwitchUserEntity caster = tuple.getT1();
 				List<Subscription> currentSubscribers = tuple.getT2();
-				List<SubscriberInfo> currentSubscriberIds = currentSubscribers.stream()
+				List<SubscriberInfo> currentSubscriberIds = new ArrayList<>(currentSubscribers.stream()
 					.map(s -> new SubscriberInfo(s.getUserId(), SubscriptionLevel.fromTier(s.getTier())))
-					.toList();
+					.toList());
 				removeDuplicateSubscribers(currentSubscriberIds);
 				List<SubscriberInfo> oldSubscribers = new ArrayList<>(caster.getSubscribers());
 				caster.getSubscribers().clear();
