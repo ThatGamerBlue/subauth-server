@@ -13,6 +13,7 @@ import com.netflix.hystrix.exception.HystrixRuntimeException;
 import com.thatgamerblue.subauth.server.components.event.EventBus;
 import com.thatgamerblue.subauth.server.components.event.events.TwitchUserLinkUpdated;
 import com.thatgamerblue.subauth.server.components.event.events.TwitchSubscriberListUpdated;
+import com.thatgamerblue.subauth.server.database.twitch.SubscriberInfo;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserRepository;
 import java.time.Duration;
@@ -61,7 +62,7 @@ public class UserInfoUpdater {
 		try {
 			TwitchUserEntity updatedUser = event.getEntity();
 			String userId = updatedUser.getUserId();
-			List<TwitchUserEntity> casters = twitchUserRepository.getAllBySubscribersContaining(userId);
+			List<TwitchUserEntity> casters = twitchUserRepository.getCastersSubscribedToBy(userId);
 			casters.forEach(caster -> eventBus.post(new TwitchSubscriberListUpdated(caster)));
 		} catch (Throwable ignored) {
 
@@ -84,8 +85,8 @@ public class UserInfoUpdater {
 			.flatMap(tuple -> {
 				TwitchUserEntity caster = tuple.getT1();
 				List<Subscription> currentSubscribers = tuple.getT2();
-				List<String> currentSubscriberIds = currentSubscribers.stream().map(Subscription::getUserId).toList();
-				List<String> oldSubscribers = caster.getSubscribers();
+				List<SubscriberInfo> currentSubscriberIds = currentSubscribers.stream().map(s -> new SubscriberInfo(s.getUserId(), SubscriptionLevel.fromTier(s.getTier()))).toList();
+				List<SubscriberInfo> oldSubscribers = caster.getSubscribers();
 				caster.setSubscribers(currentSubscriberIds);
 				caster.setLastCheck(Instant.now());
 				twitchUserRepository.save(caster);

@@ -6,7 +6,6 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.transaction.annotation.Transactional;
 
 public interface TwitchUserRepository extends JpaRepository<TwitchUserEntity, String> {
 	@Query("select u from TwitchUserEntity u where u.lastRefreshValid=true and u.canHaveSubscribers=true and u.lastCheck < :olderThan order by u.lastCheck asc limit ?1")
@@ -18,5 +17,6 @@ public interface TwitchUserRepository extends JpaRepository<TwitchUserEntity, St
 
 	Optional<TwitchUserEntity> findFirstByMinecraftUuid(String uuid);
 
-	List<TwitchUserEntity> getAllBySubscribersContaining(String userId);
+	@Query("select u from TwitchUserEntity u join u.subscribers s where s.userId = ?1")
+	List<TwitchUserEntity> getCastersSubscribedToBy(String userId);
 }

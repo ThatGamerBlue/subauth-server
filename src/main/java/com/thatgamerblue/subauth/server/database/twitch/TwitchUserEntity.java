@@ -45,6 +45,6 @@ public class TwitchUserEntity {
 	private String minecraftUuid;
 
 	@ElementCollection(fetch = FetchType.EAGER)
-	@CollectionTable(name = "twitch_subscriptions", joinColumns = @JoinColumn(name = "userId"))
-	private List<String> subscribers;
+	@CollectionTable(name = "twitch_subscriptions", joinColumns = @JoinColumn(name = "caster_id"))
+	private List<SubscriberInfo> subscribers;
 }

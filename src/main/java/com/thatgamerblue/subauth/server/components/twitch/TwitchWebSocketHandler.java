@@ -7,6 +7,7 @@ import com.thatgamerblue.subauth.server.components.websocket.SessionData;
 import com.thatgamerblue.subauth.server.components.websocket.messages.ErrorMessage;
 import com.thatgamerblue.subauth.server.components.websocket.messages.ErrorMessage.ErrorType;
 import com.thatgamerblue.subauth.server.components.websocket.messages.WhitelistUpdateMessage;
+import com.thatgamerblue.subauth.server.database.twitch.SubscriberInfo;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserEntity;
 import com.thatgamerblue.subauth.server.database.twitch.TwitchUserRepository;
 import com.thatgamerblue.subauth.server.pojo.subscriptions.TwitchSubscription;
@@ -74,7 +75,8 @@ public class TwitchWebSocketHandler implements ServiceWebSocketHandler<TwitchSub
 
 	@SneakyThrows
 	public void onUserUpdated(SessionData session, TwitchSubscription subscription, TwitchUserEntity entity) {
-		List<TwitchUserEntity> subscribers = twitchUserRepository.findAllById(entity.getSubscribers());
+		List<String> subscriberIds = entity.getSubscribers().stream().filter(s -> s.getTier().isValidForConstraint(subscription.getTier())).map(SubscriberInfo::getUserId).toList();
+		List<TwitchUserEntity> subscribers = twitchUserRepository.findAllById(subscriberIds);
 		List<String> minecraftUuids = subscribers.stream().map(TwitchUserEntity::getMinecraftUuid).filter(Objects::nonNull).toList();
 		session.send(new WhitelistUpdateMessage(subscription, minecraftUuids));
 	}

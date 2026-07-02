@@ -32,11 +32,16 @@ public class GenerateSubscribeTokenHandler {
 	public WebResponse generateSubscribeToken(
 		HttpServletResponse response,
 		@RequestParam(value = "token", required = false) String token,
+		@RequestParam(value = "tier", required = false) String tier,
 		@RequestParam(value = "mcUuid", required = false) String mcUuid
 	) {
 		if (token == null) {
 			response.setStatus(400);
 			return WebResponse.error("missing token");
+		}
+		if (tier == null || !SubscriptionLevel.isValidTier(tier)) {
+			response.setStatus(400);
+			return WebResponse.error("missing tier");
 		}
 		if (mcUuid == null) {
 			response.setStatus(400);
@@ -55,7 +60,7 @@ public class GenerateSubscribeTokenHandler {
 			return WebResponse.error("invalid mcUuid");
 		}
 
-		TwitchSubscription subscription = new TwitchSubscription(entity.get().getUserId(), Instant.now());
+		TwitchSubscription subscription = new TwitchSubscription(entity.get().getUserId(), SubscriptionLevel.fromTier(tier), Instant.now());
 
 		return TokenResponse.of(jwtUtils.createJwt(subscription, Subscription.class));
 	}
